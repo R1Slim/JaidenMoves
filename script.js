@@ -1,4 +1,4 @@
-// JaidenMoves - Main Script
+// DahyTime - Main Script
 
 // Get DOM elements
 const messageElement = document.getElementById('message');
