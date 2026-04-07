@@ -8,13 +8,7 @@ dotenv.config();
 const app = express();
 const mongoose = require("mongoose");
 
-const Slot = mongoose.model("Slot", {
-  time: String,
-  rate: Number,
-  booked: Boolean,
-  name: String,
-  userId: String
-});
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -27,49 +21,75 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-mongoose.connect(MONGO_URI,)
-  .then(() => console.log('✅ MongoDB connected'))
-    .catch((err) => {
-      console.error('❌ MongoDB connection error:', err);
-      process.exit(1);
-})
+mongoose
+  .connect(MONGO_URI,)
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err);
     process.exit(1);
-  });
+})
+//Model
+const Slot = mongoose.model("Slot", {
+  time: String,
+  rate: Number,
+  booked: Boolean,
+  name: String,
+  userId: String
+});
 
 // Routes
-app.get('/api/slots', (req, res) => {
-  res.json({ message: 'Get slots endpoint' });
+app.get('/slots', async (req, res) => {
+  try{
+    const slots = await Slot.find();
+    res.json(slots);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch slots" });
+  }
 });
 
-app.post('/api/login', (req, res) => {
-  res.json({ message: 'Login endpoint' });
+app.post('/login', (req, res) => {
+  res.json({ _id: "123", name: req.body.name, role: "customer" });
 });
 
-app.post('/api/slots', (req, res) => {
-  res.json({ message: 'Add slot endpoint' });
+app.post('/slots', (req, res) => {
+  try {
+    const newSlot = new Slot({
+      time: req.body.time,
+      rate: req.body.rate,
+      booked: false,
+      name: "",
+      userId: req.body.userId
+    });
+    
+    await newSlot.save();
+    res.json(newSlot);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to add slot" });
+  }
 });
 
-app.post('/api/book', (req, res) => {
-  res.json({ message: 'Book slot endpoint' });
+
+
+app.post('/book', async (req, res) => {
+  try {
+    const slot = await Slot.findById(req.body.slotId);
+    slot.booked = true;
+    slot.name = req.body.name;
+    await slot.save();
+
+    res.json(slot);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to book slot" });
+  }
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Server is running' });
 });
-
+// Start Server
 const PORT = process.env.PORT || 5000;
-app.listen(process.env.PORT || 5000, () => {
+
+app.listen(PORT, () => {
   console.log(`🚀 Server running`);
-});
-app.get("/slots", async (req, res) => {
-  try {
-    const slots = await Slot.find();
-    res.json(slots);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch slots" });
-  }
 });
