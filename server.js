@@ -6,7 +6,7 @@ import cors from 'cors';
 dotenv.config();
 
 const app = express();
-const mongoose = require("mongoose");
+
 
 
 // Middleware
