@@ -39,11 +39,15 @@ const Slot = mongoose.model("Slot", {
 
 // Routes
 app.get("/slots", async (req, res) => {
-  try{
+  try {
     const slots = await Slot.find();
     res.json(slots);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch slots" });
+    console.error("GET /slots error:", err);
+    res.status(500).json({
+      error: "Failed to fetch slots",
+      details: err.message
+    });
   }
 });
 app.get("/", (req, res) => {
