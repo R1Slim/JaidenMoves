@@ -6,7 +6,15 @@ import cors from 'cors';
 dotenv.config();
 
 const app = express();
+const mongoose = require("mongoose");
 
+const Slot = mongoose.model("Slot", {
+  time: String,
+  rate: Number,
+  booked: Boolean,
+  name: String,
+  userId: String
+});
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -56,4 +64,12 @@ app.get('/api/health', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(process.env.PORT || 5000, () => {
   console.log(`🚀 Server running`);
+});
+app.get("/slots", async (req, res) => {
+  try {
+    const slots = await Slot.find();
+    res.json(slots);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch slots" });
+  }
 });
