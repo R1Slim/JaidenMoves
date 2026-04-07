@@ -11,7 +11,7 @@ export default function App() {
   const [rate, setRate] = useState("");
   const [error, setError] = useState("");
 
-  const API = import.meta.env.VITE_API_URL || "https://DahyTime-production.up.railway.app";
+  const API = "https://dahytime-production.up.railway.app";
 
   const fetchSlots = async () => {
     try {
