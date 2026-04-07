@@ -51,7 +51,7 @@ app.post('/login', (req, res) => {
   res.json({ _id: "123", name: req.body.name, role: "customer" });
 });
 
-app.post('/slots', (req, res) => {
+app.post('/slots', async (req, res) => {
   try {
     const newSlot = new Slot({
       time: req.body.time,
