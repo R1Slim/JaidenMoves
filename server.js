@@ -38,13 +38,16 @@ const Slot = mongoose.model("Slot", {
 });
 
 // Routes
-app.get('/slots', async (req, res) => {
+app.get("/slots", async (req, res) => {
   try{
     const slots = await Slot.find();
     res.json(slots);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch slots" });
   }
+});
+app.get("/", (req, res) => {
+  res.send("DahyTime API is running");
 });
 
 app.post('/login', (req, res) => {
@@ -73,6 +76,10 @@ app.post('/slots', async (req, res) => {
 app.post('/book', async (req, res) => {
   try {
     const slot = await Slot.findById(req.body.slotId);
+    if (!slot) {
+      return res.status(404).json({ error: "Slot not found" });
+    }
+    
     slot.booked = true;
     slot.name = req.body.name;
     await slot.save();
