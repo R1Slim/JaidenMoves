@@ -54,8 +54,10 @@ app.get("/", (req, res) => {
   res.send("DahyTime API is running");
 });
 
-app.post('/login', (req, res) => {
-  res.json({ _id: "123", name: req.body.name, role: "customer" });
+app.post("/login", (req, res) => {
+  const { name } = req.body;
+  const role = name.toLowerCase().includes("provider") ? "provider" : "customer";
+  res.json({ _id: "123", name, role });
 });
 
 app.post('/slots', async (req, res) => {
