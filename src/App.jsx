@@ -11,7 +11,7 @@ export default function App() {
   const [rate, setRate] = useState("");
   const [error, setError] = useState("");
 
-  const API = "jaidenmoves-production.up.railway.app";
+  const API = "https://jaidenmoves-production.up.railway.app";
 
   const fetchSlots = async () => {
     try {
