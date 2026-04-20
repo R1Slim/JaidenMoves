@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 
-const API = import.meta.env.VITE_API_URL || "https://jaidenmoves-production.up.railway.app";
+const API = import.meta.env.VITE_API_URL || "https://jaidenmoves-production.up.railway.app/"
 
 const brand = {
   name: "DahyTime",
@@ -107,13 +107,21 @@ function Landing({ onStart }) {
   );
 }
 
-function AuthScreen({ onLogin, loading, error }) {
+function AuthScreen({ onLogin, onRegister, loading, error }) {
+  const [mode, setMode] = useState("login");
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [role, setRole] = useState("customer");
   const [handle, setHandle] = useState("");
 
   const submit = () => {
-    onLogin({ name, role, handle });
+    const payload = { name, email, password, role, handle };
+    if (mode === "login") {
+      onLogin({ email, password });
+    } else {
+      onRegister(payload);
+    }
   };
 
   return (
@@ -123,29 +131,42 @@ function AuthScreen({ onLogin, loading, error }) {
           <div className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Welcome to {brand.name}</div>
           <h2 className="text-4xl font-bold tracking-tight text-slate-900">Set up your booking space.</h2>
           <p className="mt-4 max-w-xl text-lg text-slate-600">
-            Start as a provider to publish bookable availability, or log in as a customer to reserve time.
+            Create a provider account to publish bookable availability, or log in as a customer to reserve time.
           </p>
         </div>
 
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className={`${card} p-6`}>
-          <div className="mb-5 text-2xl font-bold">Get started</div>
+          <div className="mb-5 flex items-center justify-between">
+            <div className="text-2xl font-bold">{mode === "login" ? "Log in" : "Create account"}</div>
+            <button className="text-sm font-semibold text-slate-500" onClick={() => setMode(mode === "login" ? "register" : "login")}>
+              {mode === "login" ? "Need an account?" : "Already have one?"}
+            </button>
+          </div>
           {error && <div className="mb-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
           <div className="space-y-4">
-            <input className={input} placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
-            <div className="grid grid-cols-2 gap-3">
-              <button className={role === "customer" ? buttonPrimary : buttonSecondary} onClick={() => setRole("customer")}>Customer</button>
-              <button className={role === "provider" ? buttonPrimary : buttonSecondary} onClick={() => setRole("provider")}>Provider</button>
-            </div>
-            {role === "provider" && (
-              <input
-                className={input}
-                placeholder="Public handle, like jaiden"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-              />
+            {mode === "register" && (
+              <input className={input} placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
+            )}
+            <input className={input} placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input className={input} type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            {mode === "register" && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <button className={role === "customer" ? buttonPrimary : buttonSecondary} onClick={() => setRole("customer")}>Customer</button>
+                  <button className={role === "provider" ? buttonPrimary : buttonSecondary} onClick={() => setRole("provider")}>Provider</button>
+                </div>
+                {role === "provider" && (
+                  <input
+                    className={input}
+                    placeholder="Public handle, like jaiden"
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                  />
+                )}
+              </>
             )}
             <button className={`${buttonPrimary} w-full`} onClick={submit} disabled={loading}>
-              {loading ? "Loading..." : "Continue"}
+              {loading ? "Loading..." : mode === "login" ? "Continue" : "Create account"}
             </button>
           </div>
         </motion.div>
@@ -287,6 +308,7 @@ function CustomerDashboard({ user, slots, onBook, bookingId }) {
 export default function App() {
   const [screen, setScreen] = useState("landing");
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem("dahytime_token") || "");
   const [slots, setSlots] = useState([]);
   const [error, setError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -309,22 +331,46 @@ export default function App() {
     if (screen !== "landing") fetchSlots();
   }, [screen]);
 
-  const handleLogin = async ({ name, role, handle }) => {
+  const handleRegister = async ({ name, email, password, role, handle }) => {
     if (!name.trim()) return setError("Please enter your name.");
+    if (!email.trim() || !password.trim()) return setError("Email and password are required.");
     if (role === "provider" && !handle.trim()) return setError("Choose a public handle.");
 
     setAuthLoading(true);
     setError("");
     try {
-      const res = await fetch(`${API}/login`, {
+      const res = await fetch(`${API}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, role, handle }),
+        body: JSON.stringify({ name, email, password, role, handle }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Registration failed");
+      await handleLogin({ email, password });
+    } catch (err) {
+      setError(err.message || "Registration failed");
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogin = async ({ email, password }) => {
+    if (!email.trim() || !password.trim()) return setError("Email and password are required.");
+
+    setAuthLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Login failed");
-      setUser({ ...data, role: data.role || role, handle: data.handle || handle });
+      setUser(data.user);
+      setToken(data.token);
+      localStorage.setItem("dahytime_token", data.token);
       setScreen("app");
+      await fetchSlots();
     } catch (err) {
       setError(err.message || "Login failed");
     } finally {
@@ -333,15 +379,18 @@ export default function App() {
   };
 
   const handleCreateSlot = async ({ time, rate, duration }) => {
-    if (!user?._id) return { ok: false, error: "You need to log in again." };
+    if (!user?._id || !token) return { ok: false, error: "You need to log in again." };
     if (!time || !rate) return { ok: false, error: "Add a time and rate." };
 
     setCreating(true);
     try {
       const res = await fetch(`${API}/slots`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ time, rate: Number(rate), duration: Number(duration), userId: user._id }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ time, rate: Number(rate), duration: Number(duration) }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Could not create slot");
@@ -355,13 +404,21 @@ export default function App() {
   };
 
   const handleBook = async (slotId) => {
+    if (!token) {
+      setError("Please log in first.");
+      return;
+    }
+
     setBookingId(slotId);
     setError("");
     try {
-      const res = await fetch(`${API}/book`, {
+      const res = await fetch(`${API}/bookings`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId, name: user?.name || "Customer" }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ slotId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Booking failed");
@@ -373,12 +430,20 @@ export default function App() {
     }
   };
 
+  const signOut = () => {
+    localStorage.removeItem("dahytime_token");
+    setToken("");
+    setUser(null);
+    setSlots([]);
+    setScreen("auth");
+  };
+
   if (screen === "landing") {
     return <Landing onStart={() => setScreen("auth")} />;
   }
 
   if (!user) {
-    return <AuthScreen onLogin={handleLogin} loading={authLoading} error={error} />;
+    return <AuthScreen onLogin={handleLogin} onRegister={handleRegister} loading={authLoading} error={error} />;
   }
 
   return (
@@ -391,7 +456,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">{user.name}</div>
-            <button className={buttonSecondary} onClick={() => { setUser(null); setScreen("auth"); }}>Sign out</button>
+            <button className={buttonSecondary} onClick={signOut}>Sign out</button>
           </div>
         </div>
       </div>
